@@ -1,11 +1,20 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from datetime import date, timedelta
+from flask_mail import Mail, Message
+from datetime import date
 import sqlite3
-import os
 
 app = Flask(__name__)
 app.secret_key = 'expiry-tracker-secret-key'
 DB = 'expiry.db'
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'akramamjadali7@gmail.com'
+app.config['MAIL_PASSWORD'] = 'soyj gyhv uylj npke'
+app.config['MAIL_DEFAULT_SENDER'] = 'akramamjadali7@gmail.com'
+
+mail = Mail(app)
 
 def get_db():
     conn = sqlite3.connect(DB)
@@ -43,6 +52,36 @@ def get_days_left(expiry_date_str):
     expiry = date.fromisoformat(expiry_date_str)
     return (expiry - today).days
 
+def send_alert_email(near_expiry_products, expired_products):
+    try:
+        msg = Message(
+            subject='Expiry Tracker Alert — Products Need Attention',
+            recipients=['Mohammed2.Amjadali@live.uwe.ac.uk']
+        )
+        body = "Hello,\n\nThis is an automated alert from your Expiry Tracker system.\n\n"
+        if expired_products:
+            body += "EXPIRED PRODUCTS (remove immediately):\n"
+            body += "-" * 40 + "\n"
+            for p in expired_products:
+                body += f"  - {p['name']} ({p['category']}) | Qty: {p['quantity']} | Expired: {p['expiry_date']}\n"
+            body += "\n"
+        if near_expiry_products:
+            body += "NEAR EXPIRY PRODUCTS (within 7 days):\n"
+            body += "-" * 40 + "\n"
+            for p in near_expiry_products:
+                days = get_days_left(p['expiry_date'])
+                body += f"  - {p['name']} ({p['category']}) | Qty: {p['quantity']} | Expires in {days} day(s) on {p['expiry_date']}\n"
+            body += "\n"
+        body += "Please log in to your Expiry Tracker to take action.\n"
+        body += "https://expiry-tracker-q5w6.onrender.com\n\n"
+        body += "— Expiry Tracker System"
+        msg.body = body
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
 @app.route('/')
 def dashboard():
     conn = get_db()
@@ -61,6 +100,29 @@ def dashboard():
     return render_template('dashboard.html',
         products=products_with_status,
         total=total, safe=safe, near=near, expired=expired)
+
+@app.route('/send-alerts')
+def send_alerts():
+    conn = get_db()
+    products = conn.execute('SELECT * FROM products').fetchall()
+    conn.close()
+    near_expiry = []
+    expired = []
+    for p in products:
+        status = get_status(p['expiry_date'])
+        if status == 'Near Expiry':
+            near_expiry.append(dict(p))
+        elif status == 'Expired':
+            expired.append(dict(p))
+    if not near_expiry and not expired:
+        flash('No near-expiry or expired products found. No email sent.', 'success')
+        return redirect(url_for('dashboard'))
+    success = send_alert_email(near_expiry, expired)
+    if success:
+        flash(f'Alert email sent! ({len(expired)} expired, {len(near_expiry)} near expiry)', 'success')
+    else:
+        flash('Failed to send email. Please check your email settings.', 'error')
+    return redirect(url_for('dashboard'))
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_product():

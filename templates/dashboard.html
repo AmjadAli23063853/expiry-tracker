@@ -8,49 +8,45 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', sans-serif; background: #f5f6fa; color: #2d2d2d; }
     nav { background: #1a1a2e; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 56px; }
-    nav .brand { color: #fff; font-size: 18px; font-weight: 600; letter-spacing: 0.3px; }
+    nav .brand { color: #fff; font-size: 18px; font-weight: 600; }
     nav a { color: #a0aec0; text-decoration: none; font-size: 14px; margin-left: 1.5rem; }
     nav a:hover { color: #fff; }
     .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
     h1 { font-size: 22px; font-weight: 600; margin-bottom: 1.5rem; }
     .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
     .stat-card { background: #fff; border-radius: 10px; padding: 1.2rem 1.5rem; border-left: 4px solid #ccc; }
-    .stat-card.total  { border-color: #667eea; }
-    .stat-card.safe   { border-color: #48bb78; }
-    .stat-card.near   { border-color: #ed8936; }
-    .stat-card.expired{ border-color: #e53e3e; }
+    .stat-card.total { border-color: #667eea; }
+    .stat-card.safe { border-color: #48bb78; }
+    .stat-card.near { border-color: #ed8936; }
+    .stat-card.expired { border-color: #e53e3e; }
     .stat-card .label { font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
     .stat-card .value { font-size: 32px; font-weight: 700; }
-    .stat-card.total  .value { color: #667eea; }
-    .stat-card.safe   .value { color: #48bb78; }
-    .stat-card.near   .value { color: #ed8936; }
+    .stat-card.total .value { color: #667eea; }
+    .stat-card.safe .value { color: #48bb78; }
+    .stat-card.near .value { color: #ed8936; }
     .stat-card.expired .value { color: #e53e3e; }
     .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 10px; }
     .toolbar input { padding: 8px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; width: 240px; outline: none; }
-    .toolbar input:focus { border-color: #667eea; }
     .btn { padding: 9px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; text-decoration: none; display: inline-block; font-weight: 500; }
     .btn-primary { background: #667eea; color: #fff; }
-    .btn-primary:hover { background: #5a6fd6; }
+    .btn-alert { background: #e53e3e; color: #fff; }
     .btn-sm { padding: 5px 12px; font-size: 13px; border-radius: 6px; }
     .btn-edit { background: #ebf4ff; color: #3182ce; border: 1px solid #bee3f8; }
-    .btn-edit:hover { background: #bee3f8; }
     .btn-delete { background: #fff5f5; color: #e53e3e; border: 1px solid #fed7d7; }
-    .btn-delete:hover { background: #fed7d7; }
-    table { width: 100%; background: #fff; border-radius: 10px; overflow: hidden; border-collapse: collapse; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    table { width: 100%; background: #fff; border-radius: 10px; overflow: hidden; border-collapse: collapse; }
     thead { background: #f7fafc; }
-    th { padding: 12px 16px; text-align: left; font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
+    th { padding: 12px 16px; text-align: left; font-size: 12px; color: #718096; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
     td { padding: 13px 16px; font-size: 14px; border-bottom: 1px solid #f0f4f8; vertical-align: middle; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #f7fafc; }
     .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-    .badge-safe    { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
-    .badge-near    { background: #fffaf0; color: #7b341e; border: 1px solid #fbd38d; }
+    .badge-safe { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
+    .badge-near { background: #fffaf0; color: #7b341e; border: 1px solid #fbd38d; }
     .badge-expired { background: #fff5f5; color: #742a2a; border: 1px solid #feb2b2; }
     .empty { text-align: center; padding: 3rem; color: #a0aec0; font-size: 15px; }
     .flash { padding: 12px 16px; border-radius: 8px; margin-bottom: 1rem; font-size: 14px; }
     .flash-success { background: #f0fff4; color: #276749; border: 1px solid #9ae6b4; }
-    .flash-error   { background: #fff5f5; color: #742a2a; border: 1px solid #feb2b2; }
-    @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } th:nth-child(3), td:nth-child(3) { display: none; } }
+    .flash-error { background: #fff5f5; color: #742a2a; border: 1px solid #feb2b2; }
   </style>
 </head>
 <body>
@@ -88,7 +84,10 @@
   </div>
   <div class="toolbar">
     <input type="text" id="search" placeholder="Search products..." onkeyup="filterTable()">
-    <a href="{{ url_for('add_product') }}" class="btn btn-primary">+ Add Product</a>
+    <div style="display:flex;gap:8px;">
+      <a href="{{ url_for('add_product') }}" class="btn btn-primary">+ Add Product</a>
+      <a href="{{ url_for('send_alerts') }}" class="btn btn-alert">Send Alert Email</a>
+    </div>
   </div>
   {% if products %}
   <table id="productTable">
