@@ -1,11 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mail import Mail, Message
 from datetime import date
-import sqlite3
+import psycopg2
+import psycopg2.extras
+import os
 
 app = Flask(__name__)
 app.secret_key = 'expiry-tracker-secret-key'
-DB = 'expiry.db'
+
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://expiry_tracker_db_q0yv_user:7iNzBlfbmTcy2PSAyBTavH7PT9FDJfez@dpg-d7hcfbvlk1mc73b6sv1g-a/expiry_tracker_db_q0yv')
 
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
@@ -17,15 +20,15 @@ app.config['MAIL_DEFAULT_SENDER'] = 'akramamjadali7@gmail.com'
 mail = Mail(app)
 
 def get_db():
-    conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL)
     return conn
 
 def init_db():
     conn = get_db()
-    conn.execute('''
+    cur = conn.cursor()
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT NOT NULL,
             category TEXT NOT NULL,
             quantity INTEGER NOT NULL,
@@ -34,6 +37,7 @@ def init_db():
         )
     ''')
     conn.commit()
+    cur.close()
     conn.close()
 
 def get_status(expiry_date_str):
@@ -85,7 +89,10 @@ def send_alert_email(near_expiry_products, expired_products):
 @app.route('/')
 def dashboard():
     conn = get_db()
-    products = conn.execute('SELECT * FROM products ORDER BY expiry_date ASC').fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM products ORDER BY expiry_date ASC')
+    products = cur.fetchall()
+    cur.close()
     conn.close()
     products_with_status = []
     total = len(products)
@@ -93,7 +100,10 @@ def dashboard():
     for p in products:
         status = get_status(p['expiry_date'])
         days = get_days_left(p['expiry_date'])
-        products_with_status.append(dict(p) | {'status': status, 'days_left': days})
+        product_dict = dict(p)
+        product_dict['status'] = status
+        product_dict['days_left'] = days
+        products_with_status.append(product_dict)
         if status == 'Safe': safe += 1
         elif status == 'Near Expiry': near += 1
         else: expired += 1
@@ -104,7 +114,10 @@ def dashboard():
 @app.route('/send-alerts')
 def send_alerts():
     conn = get_db()
-    products = conn.execute('SELECT * FROM products').fetchall()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM products')
+    products = cur.fetchall()
+    cur.close()
     conn.close()
     near_expiry = []
     expired = []
@@ -135,11 +148,13 @@ def add_product():
             flash('All fields are required.', 'error')
             return redirect(url_for('add_product'))
         conn = get_db()
-        conn.execute(
-            'INSERT INTO products (name, category, quantity, expiry_date, added_date) VALUES (?, ?, ?, ?, ?)',
+        cur = conn.cursor()
+        cur.execute(
+            'INSERT INTO products (name, category, quantity, expiry_date, added_date) VALUES (%s, %s, %s, %s, %s)',
             (name, category, int(quantity), expiry_date, date.today().isoformat())
         )
         conn.commit()
+        cur.close()
         conn.close()
         flash(f'"{name}" added successfully!', 'success')
         return redirect(url_for('dashboard'))
@@ -148,8 +163,11 @@ def add_product():
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_product(id):
     conn = get_db()
-    product = conn.execute('SELECT * FROM products WHERE id = ?', (id,)).fetchone()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT * FROM products WHERE id = %s', (id,))
+    product = cur.fetchone()
     if not product:
+        cur.close()
         conn.close()
         flash('Product not found.', 'error')
         return redirect(url_for('dashboard'))
@@ -158,25 +176,30 @@ def edit_product(id):
         category = request.form['category'].strip()
         quantity = request.form['quantity']
         expiry_date = request.form['expiry_date']
-        conn.execute(
-            'UPDATE products SET name=?, category=?, quantity=?, expiry_date=? WHERE id=?',
+        cur.execute(
+            'UPDATE products SET name=%s, category=%s, quantity=%s, expiry_date=%s WHERE id=%s',
             (name, category, int(quantity), expiry_date, id)
         )
         conn.commit()
+        cur.close()
         conn.close()
         flash(f'"{name}" updated successfully!', 'success')
         return redirect(url_for('dashboard'))
+    cur.close()
     conn.close()
     return render_template('edit_product.html', product=product)
 
 @app.route('/delete/<int:id>', methods=['POST'])
 def delete_product(id):
     conn = get_db()
-    product = conn.execute('SELECT name FROM products WHERE id = ?', (id,)).fetchone()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute('SELECT name FROM products WHERE id = %s', (id,))
+    product = cur.fetchone()
     if product:
-        conn.execute('DELETE FROM products WHERE id = ?', (id,))
+        cur.execute('DELETE FROM products WHERE id = %s', (id,))
         conn.commit()
         flash(f'"{product["name"]}" deleted.', 'success')
+    cur.close()
     conn.close()
     return redirect(url_for('dashboard'))
 
