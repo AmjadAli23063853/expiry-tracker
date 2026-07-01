@@ -5,7 +5,11 @@ from datetime import date
 import psycopg2
 import psycopg2.extras
 import os
-import pytesseract
+try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
 from PIL import Image
 import re
 
