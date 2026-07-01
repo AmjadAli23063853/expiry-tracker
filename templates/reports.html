@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports — Expiry Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f5f6fa; color: #2d2d2d; }
+    nav { background: #1a1a2e; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav .brand { color: #fff; font-size: 18px; font-weight: 600; }
+    nav a { color: #a0aec0; text-decoration: none; font-size: 14px; margin-left: 1.5rem; }
+    nav a:hover { color: #fff; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 1.5rem; }
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .chart-card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .chart-title { font-size: 15px; font-weight: 600; color: #1a1a2e; margin-bottom: 1rem; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+    .stat-card { background: #fff; border-radius: 10px; padding: 1.2rem 1.5rem; border-left: 4px solid #ccc; }
+    .stat-card.total { border-color: #667eea; }
+    .stat-card.safe { border-color: #48bb78; }
+    .stat-card.near { border-color: #ed8936; }
+    .stat-card.expired { border-color: #e53e3e; }
+    .stat-label { font-size: 12px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-card.total .stat-value { color: #667eea; }
+    .stat-card.safe .stat-value { color: #48bb78; }
+    .stat-card.near .stat-value { color: #ed8936; }
+    .stat-card.expired .stat-value { color: #e53e3e; }
+  </style>
+</head>
+<body>
+<nav>
+  <span class="brand">ExpiryTracker</span>
+  <div>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('reports') }}">Reports</a>
+    <a href="{{ url_for('notifications') }}">Notifications</a>
+    <a href="{{ url_for('logout') }}">Logout ({{ current_user.username }})</a>
+  </div>
+</nav>
+<div class="container">
+  <h1>Reports & Analytics</h1>
+  <div class="stats-row">
+    <div class="stat-card total">
+      <div class="stat-label">Total Products</div>
+      <div class="stat-value">{{ total }}</div>
+    </div>
+    <div class="stat-card safe">
+      <div class="stat-label">Safe</div>
+      <div class="stat-value">{{ safe }}</div>
+    </div>
+    <div class="stat-card near">
+      <div class="stat-label">Near Expiry</div>
+      <div class="stat-value">{{ near }}</div>
+    </div>
+    <div class="stat-card expired">
+      <div class="stat-label">Expired</div>
+      <div class="stat-value">{{ expired }}</div>
+    </div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Product Status Overview</div>
+      <canvas id="statusChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Products by Category</div>
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </div>
+</div>
+<script>
+  const statusCtx = document.getElementById('statusChart').getContext('2d');
+  new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Safe', 'Near Expiry', 'Expired'],
+      datasets: [{
+        data: [{{ safe }}, {{ near }}, {{ expired }}],
+        backgroundColor: ['#48bb78', '#ed8936', '#e53e3e'],
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+  new Chart(categoryCtx, {
+    type: 'bar',
+    data: {
+      labels: [{% for cat in category_counts %}'{{ cat }}'{% if not loop.last %},{% endif %}{% endfor %}],
+      datasets: [{
+        label: 'Number of Products',
+        data: [{% for cat, count in category_counts.items() %}{{ count }}{% if not loop.last %},{% endif %}{% endfor %}],
+        backgroundColor: '#667eea',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+</script>
+</body>
+</html>

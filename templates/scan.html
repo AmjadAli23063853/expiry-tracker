@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan Product — Expiry Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f5f6fa; color: #2d2d2d; }
+    nav { background: #1a1a2e; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 56px; }
+    nav .brand { color: #fff; font-size: 18px; font-weight: 600; }
+    nav a { color: #a0aec0; text-decoration: none; font-size: 14px; margin-left: 1.5rem; }
+    nav a:hover { color: #fff; }
+    .container { max-width: 600px; margin: 2.5rem auto; padding: 0 1.5rem; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 1.5rem; }
+    .card { background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+    .upload-area { border: 2px dashed #e2e8f0; border-radius: 10px; padding: 2rem; text-align: center; margin-bottom: 1.5rem; cursor: pointer; transition: border-color 0.2s; }
+    .upload-area:hover { border-color: #667eea; }
+    .upload-icon { font-size: 48px; margin-bottom: 12px; }
+    .upload-text { font-size: 15px; color: #4a5568; margin-bottom: 8px; }
+    .upload-sub { font-size: 13px; color: #a0aec0; }
+    input[type="file"] { display: none; }
+    .btn { padding: 11px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; font-weight: 500; }
+    .btn-primary { background: #667eea; color: #fff; width: 100%; }
+    .btn-primary:hover { background: #5a6fd6; }
+    .result-box { background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 10px; padding: 1.5rem; margin-top: 1.5rem; text-align: center; }
+    .result-date { font-size: 32px; font-weight: 800; color: #276749; margin: 10px 0; }
+    .result-label { font-size: 13px; color: #4a5568; }
+    .error-box { background: #fff5f5; border: 1px solid #feb2b2; border-radius: 10px; padding: 1rem; margin-top: 1rem; font-size: 14px; color: #742a2a; }
+    .use-date-btn { background: #48bb78; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; text-decoration: none; display: inline-block; }
+    .preview-img { max-width: 100%; border-radius: 8px; margin-top: 1rem; display: none; }
+    .back { display: inline-block; margin-bottom: 1rem; font-size: 14px; color: #667eea; text-decoration: none; }
+  </style>
+</head>
+<body>
+<nav>
+  <span class="brand">ExpiryTracker</span>
+  <div>
+    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a href="{{ url_for('add_product') }}">+ Add Product</a>
+    <a href="{{ url_for('scan_product') }}">Scan Product</a>
+    <a href="{{ url_for('reports') }}">Reports</a>
+    <a href="{{ url_for('notifications') }}">Notifications</a>
+    <a href="{{ url_for('logout') }}">Logout ({{ current_user.username }})</a>
+  </div>
+</nav>
+<div class="container">
+  <a href="{{ url_for('dashboard') }}" class="back">← Back to Dashboard</a>
+  <h1>Scan Product Expiry Date</h1>
+  <div class="card">
+    <form method="POST" enctype="multipart/form-data" id="scanForm">
+      <div class="upload-area" onclick="document.getElementById('imageInput').click()">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">Click to upload a product photo</div>
+        <div class="upload-sub">Take a photo of the expiry date on the packaging</div>
+        <img id="preview" class="preview-img" src="" alt="Preview">
+      </div>
+      <input type="file" id="imageInput" name="image" accept="image/*" capture="environment" onchange="previewImage(this)">
+      <button type="submit" class="btn btn-primary">Scan for Expiry Date</button>
+    </form>
+
+    {% if detected_date %}
+    <div class="result-box">
+      <div class="result-label">Expiry date detected!</div>
+      <div class="result-date">{{ detected_date }}</div>
+      <div class="result-label">Use this date when adding your product</div>
+      <a href="{{ url_for('add_product') }}?date={{ detected_date }}" class="use-date-btn">Use This Date → Add Product</a>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="error-box">⚠ {{ error }}</div>
+    {% endif %}
+  </div>
+</div>
+<script>
+function previewImage(input) {
+  const preview = document.getElementById('preview');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+</body>
+</html>
