@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_mail import Mail, Message
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import date
+import threading
 import psycopg2
 import psycopg2.extras
 import os
@@ -192,20 +193,29 @@ def send_alerts():
     if not near_expiry and not expired:
         flash('No near-expiry or expired products found. No email sent.', 'success')
         return redirect(url_for('dashboard'))
-    success = send_alert_email(near_expiry, expired)
-    if success:
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute(
-            'INSERT INTO notification_history (sent_at, expired_count, near_expiry_count, total_products) VALUES (%s, %s, %s, %s)',
-            (date.today().isoformat(), len(expired), len(near_expiry), len(products))
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
-        flash(f'Alert email sent! ({len(expired)} expired, {len(near_expiry)} near expiry)', 'success')
-    else:
-        flash('Failed to send email. Please check your email settings.', 'error')
+
+    def send_in_background(near_expiry, expired, total):
+        with app.app_context():
+            try:
+                success = send_alert_email(near_expiry, expired)
+                if success:
+                    conn = get_db()
+                    cur = conn.cursor()
+                    cur.execute(
+                        'INSERT INTO notification_history (sent_at, expired_count, near_expiry_count, total_products) VALUES (%s, %s, %s, %s)',
+                        (date.today().isoformat(), len(expired), len(near_expiry), total)
+                    )
+                    conn.commit()
+                    cur.close()
+                    conn.close()
+                    print('Alert email sent in background!')
+                else:
+                    print('Background email send failed.')
+            except Exception as e:
+                print(f'Background alert error: {e}')
+
+    threading.Thread(target=send_in_background, args=(near_expiry, expired, len(products))).start()
+    flash(f'Sending alert email... ({len(expired)} expired, {len(near_expiry)} near expiry)', 'success')
     return redirect(url_for('dashboard'))
 
 @app.route('/add', methods=['GET', 'POST'])
@@ -407,6 +417,6 @@ def scan_product():
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', threaded=True)
 
 init_db()
