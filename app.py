@@ -98,7 +98,7 @@ def send_alert_email(near_expiry_products, expired_products):
     try:
         msg = Message(
             subject='Expiry Tracker Alert — Products Need Attention',
-            recipients=['Mohammed2.Amjadali@live.uwe.ac.uk']
+            recipients=['akramamjadali7@gmail.com']
         )
         body = "Hello,\n\nThis is an automated alert from your Expiry Tracker system.\n\n"
         if expired_products:
